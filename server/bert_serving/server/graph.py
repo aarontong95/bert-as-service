@@ -75,7 +75,21 @@ def optimize_graph(args, logger=None):
                 token_type_ids=input_type_ids,
                 use_one_hot_embeddings=False,
                 use_position_embeddings=not args.no_position_embeddings)
+    
+            # Calculate the logit        
+            output_layer = model.get_pooled_output()
+            with tf.variable_scope("cls/seq_relationship"):
+                output_weights = tf.get_variable(
+                    "output_weights",
+                    shape=[2, bert_config.hidden_size],
+                    initializer=modeling.create_initializer(bert_config.initializer_range))
+                output_bias = tf.get_variable(
+                    "output_bias", shape=[2], initializer=tf.zeros_initializer())
 
+                logits = tf.matmul(output_layer, output_weights, transpose_b=True)
+                pooled = tf.nn.bias_add(logits, output_bias)
+#                pooled = tf.nn.log_softmax(pooled, axis=-1)
+                
             tvars = tf.trainable_variables()
 
             (assignment_map, initialized_variable_names
@@ -83,43 +97,43 @@ def optimize_graph(args, logger=None):
 
             tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
-            minus_mask = lambda x, m: x - tf.expand_dims(1.0 - m, axis=-1) * 1e30
-            mul_mask = lambda x, m: x * tf.expand_dims(m, axis=-1)
-            masked_reduce_max = lambda x, m: tf.reduce_max(minus_mask(x, m), axis=1)
-            masked_reduce_mean = lambda x, m: tf.reduce_sum(mul_mask(x, m), axis=1) / (
-                    tf.reduce_sum(m, axis=1, keepdims=True) + 1e-10)
+#             minus_mask = lambda x, m: x - tf.expand_dims(1.0 - m, axis=-1) * 1e30
+#             mul_mask = lambda x, m: x * tf.expand_dims(m, axis=-1)
+#             masked_reduce_max = lambda x, m: tf.reduce_max(minus_mask(x, m), axis=1)
+#             masked_reduce_mean = lambda x, m: tf.reduce_sum(mul_mask(x, m), axis=1) / (
+#                     tf.reduce_sum(m, axis=1, keepdims=True) + 1e-10)
 
-            with tf.variable_scope("pooling"):
-                if len(args.pooling_layer) == 1:
-                    encoder_layer = model.all_encoder_layers[args.pooling_layer[0]]
-                else:
-                    all_layers = [model.all_encoder_layers[l] for l in args.pooling_layer]
-                    encoder_layer = tf.concat(all_layers, -1)
+#             with tf.variable_scope("pooling"):
+#                 if len(args.pooling_layer) == 1:
+#                     encoder_layer = model.all_encoder_layers[args.pooling_layer[0]]
+#                 else:
+#                     all_layers = [model.all_encoder_layers[l] for l in args.pooling_layer]
+#                     encoder_layer = tf.concat(all_layers, -1)
 
-                input_mask = tf.cast(input_mask, tf.float32)
-                if args.pooling_strategy == PoolingStrategy.REDUCE_MEAN:
-                    pooled = masked_reduce_mean(encoder_layer, input_mask)
-                elif args.pooling_strategy == PoolingStrategy.REDUCE_MAX:
-                    pooled = masked_reduce_max(encoder_layer, input_mask)
-                elif args.pooling_strategy == PoolingStrategy.REDUCE_MEAN_MAX:
-                    pooled = tf.concat([masked_reduce_mean(encoder_layer, input_mask),
-                                        masked_reduce_max(encoder_layer, input_mask)], axis=1)
-                elif args.pooling_strategy == PoolingStrategy.FIRST_TOKEN or \
-                        args.pooling_strategy == PoolingStrategy.CLS_TOKEN:
-                    pooled = tf.squeeze(encoder_layer[:, 0:1, :], axis=1)
-                elif args.pooling_strategy == PoolingStrategy.LAST_TOKEN or \
-                        args.pooling_strategy == PoolingStrategy.SEP_TOKEN:
-                    seq_len = tf.cast(tf.reduce_sum(input_mask, axis=1), tf.int32)
-                    rng = tf.range(0, tf.shape(seq_len)[0])
-                    indexes = tf.stack([rng, seq_len - 1], 1)
-                    pooled = tf.gather_nd(encoder_layer, indexes)
-                elif args.pooling_strategy == PoolingStrategy.NONE:
-                    pooled = mul_mask(encoder_layer, input_mask)
-                else:
-                    raise NotImplementedError()
+#                 input_mask = tf.cast(input_mask, tf.float32)
+#                 if args.pooling_strategy == PoolingStrategy.REDUCE_MEAN:
+#                     pooled = masked_reduce_mean(encoder_layer, input_mask)
+#                 elif args.pooling_strategy == PoolingStrategy.REDUCE_MAX:
+#                     pooled = masked_reduce_max(encoder_layer, input_mask)
+#                 elif args.pooling_strategy == PoolingStrategy.REDUCE_MEAN_MAX:
+#                     pooled = tf.concat([masked_reduce_mean(encoder_layer, input_mask),
+#                                         masked_reduce_max(encoder_layer, input_mask)], axis=1)
+#                 elif args.pooling_strategy == PoolingStrategy.FIRST_TOKEN or \
+#                         args.pooling_strategy == PoolingStrategy.CLS_TOKEN:
+#                     pooled = tf.squeeze(encoder_layer[:, 0:1, :], axis=1)
+#                 elif args.pooling_strategy == PoolingStrategy.LAST_TOKEN or \
+#                         args.pooling_strategy == PoolingStrategy.SEP_TOKEN:
+#                     seq_len = tf.cast(tf.reduce_sum(input_mask, axis=1), tf.int32)
+#                     rng = tf.range(0, tf.shape(seq_len)[0])
+#                     indexes = tf.stack([rng, seq_len - 1], 1)
+#                     pooled = tf.gather_nd(encoder_layer, indexes)
+#                 elif args.pooling_strategy == PoolingStrategy.NONE:
+#                     pooled = mul_mask(encoder_layer, input_mask)
+#                 else:
+#                     raise NotImplementedError()
 
-            if args.fp16:
-                pooled = tf.cast(pooled, tf.float16)
+#             if args.fp16:
+#                 pooled = tf.cast(pooled, tf.float16)
 
             pooled = tf.identity(pooled, 'final_encodes')
             output_tensors = [pooled]
