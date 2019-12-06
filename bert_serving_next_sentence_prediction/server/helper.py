@@ -99,12 +99,15 @@ def get_args_parser():
     group2.add_argument('-cased_tokenization', dest='do_lower_case', action='store_false', default=True,
                         help='Whether tokenizer should skip the default lowercasing and accent removal.'
                              'Should be used for e.g. the multilingual cased pretrained BERT model.')
-    group2.add_argument('-pooling_layer', type=int, nargs='+', default=[-2],
-                        help='the encoder layer(s) that receives pooling. \
-                        Give a list in order to concatenate several layers into one')
-    group2.add_argument('-pooling_strategy', type=PoolingStrategy.from_string,
-                        default=PoolingStrategy.REDUCE_MEAN, choices=list(PoolingStrategy),
-                        help='the pooling strategy for generating encoding vectors')
+    
+    # Dont's need in predicting next sentence 
+#     group2.add_argument('-pooling_layer', type=int, nargs='+', default=[-2],
+#                         help='the encoder layer(s) that receives pooling. \
+#                         Give a list in order to concatenate several layers into one')
+#     group2.add_argument('-pooling_strategy', type=PoolingStrategy.from_string,
+#                         default=PoolingStrategy.REDUCE_MEAN, choices=list(PoolingStrategy),
+#                         help='the pooling strategy for generating encoding vectors')
+
     group2.add_argument('-mask_cls_sep', action='store_true', default=False,
                         help='masking the embedding on [CLS] and [SEP] with zero. \
                         When pooling_strategy is in {CLS_TOKEN, FIRST_TOKEN, SEP_TOKEN, LAST_TOKEN} \
@@ -117,6 +120,10 @@ def get_args_parser():
                         help='sending tokenization results to client')
     group2.add_argument('-no_position_embeddings', action='store_true', default=False,
                         help='Whether to add position embeddings for the position of each token in the sequence.')
+    # Add return_probit
+    group2.add_argument('-return_probit', type=int, default=1,
+                        help='Whether to return probability.')
+
 
     group3 = parser.add_argument_group('Serving Configs',
                                        'config how server utilizes GPU/CPU resources')

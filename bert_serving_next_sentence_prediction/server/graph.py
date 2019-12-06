@@ -88,8 +88,9 @@ def optimize_graph(args, logger=None):
 
                 logits = tf.matmul(output_layer, output_weights, transpose_b=True)
                 pooled = tf.nn.bias_add(logits, output_bias)
-#                pooled = tf.nn.log_softmax(pooled, axis=-1)
-                
+                if args.return_probit :
+                    pooled = tf.nn.softmax(logits, axis=-1)                
+                    
             tvars = tf.trainable_variables()
 
             (assignment_map, initialized_variable_names

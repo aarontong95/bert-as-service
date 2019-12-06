@@ -1,0 +1,4 @@
+from bert_serving_next_sentence_prediction.server.benchmark import run_benchmark
+from bert_serving_next_sentence_prediction.server.helper import get_run_args, get_benchmark_parser
+args = get_run_args(get_benchmark_parser)
+run_benchmark(args)
