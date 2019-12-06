@@ -100,7 +100,7 @@ def get_args_parser():
                         help='Whether tokenizer should skip the default lowercasing and accent removal.'
                              'Should be used for e.g. the multilingual cased pretrained BERT model.')
     
-    # Dont's need in predicting next sentence 
+    # Don't need these two in predicting next sentence 
 #     group2.add_argument('-pooling_layer', type=int, nargs='+', default=[-2],
 #                         help='the encoder layer(s) that receives pooling. \
 #                         Give a list in order to concatenate several layers into one')
