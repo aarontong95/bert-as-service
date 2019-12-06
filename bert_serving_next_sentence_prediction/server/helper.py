@@ -121,7 +121,7 @@ def get_args_parser():
     group2.add_argument('-no_position_embeddings', action='store_true', default=False,
                         help='Whether to add position embeddings for the position of each token in the sequence.')
     # Add return_probit
-    group2.add_argument('-return_probit', type=int, default=1,
+    group2.add_argument('-return_probit', action='store_true', default=False,
                         help='Whether to return probability.')
 
 
